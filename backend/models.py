@@ -1,14 +1,17 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
 db = SQLAlchemy()
 
-class User(db.Model):
+class User(db.Model, UserMixin):
     userID = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(50), default='customer')
+    role = db.Column(db.String(50), default='student')
 
     orders = db.relationship('Order', backref='user', lazy=True)
     shopping_cart = db.relationship('ShoppingCart', backref='user', uselist=False)
@@ -16,6 +19,15 @@ class User(db.Model):
     forum_posts = db.relationship('ForumPost', backref='user', lazy=True)
     forum_comments = db.relationship('ForumComment', backref='user', lazy=True)
     bills = db.relationship('BillInvoice', backref='user', lazy=True)
+    
+    def set_password(self, password):
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
+    
+    def get_id(self):
+        return str(self.userID) 
 
 class Item(db.Model):
     itemID = db.Column(db.Integer, primary_key=True)
