@@ -14,16 +14,28 @@ def login_role(role):
         if user and user.check_password(password):
             login_user(user)
             flash(f'{role.capitalize()} login successful!', 'success')
-            return redirect(url_for('dashboard'))
+
+            # Redirect based on role
+            if role == 'admin':
+                return redirect(url_for('admin.dashboard'))
+            elif role == 'vendor':
+                return redirect(url_for('vendor.dashboard'))
+            elif role == 'student':
+                return redirect(url_for('student.dashboard'))
+            else:
+                return redirect(url_for('home'))
+
         else:
             flash('Invalid credentials or role mismatch.', 'danger')
 
+    # Load appropriate login page
     page_map = {
         'student': 'StudentLogin.html',
         'vendor': 'VendorLogin.html',
         'admin': 'AdminLogin.html'
     }
     return render_template(page_map.get(role, 'Home.html'))
+
 
 
 # ------------------- REGISTER ROUTES -------------------
