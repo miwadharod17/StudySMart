@@ -63,6 +63,7 @@ class Item(db.Model):
     category = db.Column(db.String(100))
     price = db.Column(db.Float, nullable=False)
     availability = db.Column(db.Integer, default=0)
+    sellerID = db.Column(db.Integer)
 
     feedbacks = db.relationship('Feedback', backref='item', lazy=True)
     orders = db.relationship('OrderDetails', backref='item', lazy=True)

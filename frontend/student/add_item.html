@@ -1,0 +1,26 @@
+{% extends "student/dashboard.html" %}
+{% set active_page = 'add_item' %}
+
+{% block dashboard_content %}
+<h4 class="fw-semibold mb-3">Add an Item to Sell</h4>
+
+<form method="POST">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Item Title</label>
+      <input type="text" name="title" class="form-control" required>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Price (₹)</label>
+      <input type="number" name="price" step="0.01" min="0" class="form-control" required>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Description</label>
+      <textarea name="category" class="form-control" rows="3" required></textarea>
+    </div>
+  </div>
+  <div class="mt-3">
+    <button type="submit" class="btn btn-success">Add Item</button>
+  </div>
+</form>
+{% endblock %}

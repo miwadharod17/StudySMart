@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="fw-semibold text-danger">Transaction Details</h3>
+    <a href="{{ url_for('admin.market_transactions') }}" class="btn btn-outline-secondary btn-sm">Back</a>
+  </div>
+
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">Order #{{ order.orderID }}</h5>
+      <p><strong>User:</strong> {{ order.user.name }} ({{ order.user.email }})</p>
+      <p><strong>Status:</strong> 
+        <span class="badge bg-{{ 'success' if order.status == 'Placed' else 'secondary' }}">{{ order.status }}</span>
+      </p>
+      <p><strong>Order Date:</strong> {{ order.orderDate.strftime('%d %B %Y, %I:%M %p') }}</p>
+      <p><strong>Voucher ID:</strong> {{ order.voucherID or '—' }}</p>
+    </div>
+  </div>
+
+  <h5 class="fw-semibold mb-3">Ordered Items</h5>
+  {% if order.items %}
+  <div class="table-responsive">
+    <table class="table table-bordered align-middle">
+      <thead class="table-danger">
+        <tr>
+          <th>Item ID</th>
+          <th>Title</th>
+          <th>Quantity</th>
+          <th>Price (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in order.items %}
+        <tr>
+          <td>{{ item.itemID }}</td>
+          <td>{{ item.title }}</td>
+          <td>{{ item.quantity or 1 }}</td>
+          <td>{{ "%.2f"|format(item.price) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="alert alert-info text-center">No items in this order.</div>
+  {% endif %}
+</div>
+{% endblock %}

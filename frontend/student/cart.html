@@ -1,0 +1,57 @@
+{% extends "student/dashboard.html" %}
+{% set active_page = 'cart' %}
+
+{% block dashboard_content %}
+<h4 class="fw-semibold mb-3">My Shopping Cart</h4>
+
+{% if cart_items %}
+<table class="table table-hover align-middle">
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Price (₹)</th>
+      <th>Quantity</th>
+      <th>Total (₹)</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% set grand_total = 0 %}
+    {% for item in cart_items %}
+      {% set total = item.quantity * item.item.price %}
+      {% set grand_total = grand_total + total %}
+      <tr>
+        <td>{{ item.item.title }}</td>
+        <td>₹{{ item.item.price }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('student.update_cart', cart_id=item.cartID) }}" class="d-flex">
+            <input type="number" name="quantity" value="{{ item.quantity }}" min="1" class="form-control form-control-sm me-2" style="width:70px;">
+            <button class="btn btn-sm btn-outline-primary">Update</button>
+          </form>
+        </td>
+        <td>₹{{ total }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('student.remove_from_cart', cart_id=item.cartID) }}">
+            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove {{ item.item.title }} from cart?')">Remove</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <th colspan="3" class="text-end">Grand Total:</th>
+      <th>₹{{ grand_total }}</th>
+      <th></th>
+    </tr>
+  </tfoot>
+</table>
+
+<form method="POST" action="{{ url_for('student.checkout') }}">
+  <button class="btn btn-success">Proceed to Checkout</button>
+</form>
+
+{% else %}
+<div class="alert alert-info">Your cart is empty. Browse <a href="{{ url_for('student.marketplace') }}">marketplace</a> to add items!</div>
+{% endif %}
+{% endblock %}

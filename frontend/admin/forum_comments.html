@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="fw-semibold text-warning">Forum Comments</h3>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
+  </div>
+
+  {% if comments.items %}
+  <div class="table-responsive">
+    <table class="table table-hover table-bordered align-middle">
+      <thead class="table-warning">
+        <tr>
+          <th>Comment ID</th>
+          <th>Content</th>
+          <th>Post</th>
+          <th>Author</th>
+          <th>Timestamp</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for comment in comments.items %}
+        <tr>
+          <td>{{ comment.commentID }}</td>
+          <td class="text-truncate" style="max-width:360px;">{{ comment.content }}</td>
+          <td>
+            {% if comment.forum_post %}
+              <a href="{{ url_for('admin.forum_post_detail', post_id=comment.forum_post.postID) }}">
+                {{ comment.forum_post.title|truncate(50) }}
+              </a>
+            {% else %}
+              — 
+            {% endif %}
+          </td>
+          <td>{{ comment.user.name if comment.user else '—' }}</td>
+          <td>{{ comment.timestamp.strftime('%d %b %Y, %I:%M %p') }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('admin.forum_comment_delete', comment_id=comment.commentID) }}" class="d-inline"
+                  onsubmit="return confirm('Delete this comment?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <nav>
+    <ul class="pagination justify-content-center">
+      {% if comments.has_prev %}
+      <li class="page-item"><a class="page-link" href="{{ url_for('admin.forum_comments', page=comments.prev_num) }}">Previous</a></li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Previous</span></li>
+      {% endif %}
+
+      {% for p in comments.iter_pages() %}
+        {% if p %}
+        <li class="page-item {% if p == comments.page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('admin.forum_comments', page=p) }}">{{ p }}</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+
+      {% if comments.has_next %}
+      <li class="page-item"><a class="page-link" href="{{ url_for('admin.forum_comments', page=comments.next_num) }}">Next</a></li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Next</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  {% else %}
+    <div class="alert alert-info text-center">No comments found.</div>
+  {% endif %}
+</div>
+{% endblock %}

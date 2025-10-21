@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="fw-semibold text-success">Manage Users</h3>
+        <div>
+            <a href="{{ url_for('admin.market_user_create') }}" class="btn btn-outline-primary btn-sm">+ Add User</a>
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary btn-sm">Back</a>
+        </div>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="mb-3">
+        <a href="{{ url_for('admin.market_users') }}" class="btn btn-sm {% if not role %}btn-success{% else %}btn-outline-success{% endif %}">All</a>
+        <a href="{{ url_for('admin.market_users', role='student') }}" class="btn btn-sm {% if role=='student' %}btn-success{% else %}btn-outline-success{% endif %}">Students</a>
+        <a href="{{ url_for('admin.market_users', role='vendor') }}" class="btn btn-sm {% if role=='vendor' %}btn-success{% else %}btn-outline-success{% endif %}">Vendors</a>
+        <a href="{{ url_for('admin.market_users', role='admin') }}" class="btn btn-sm {% if role=='admin' %}btn-success{% else %}btn-outline-success{% endif %}">Admins</a>
+    </div>
+
+    {% if users.items %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead class="table-success">
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users.items %}
+                <tr>
+                    <td>{{ user.userID }}</td>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.role|capitalize }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.market_user_edit', user_id=user.userID) }}" class="btn btn-sm btn-outline-info">Edit</a>
+                        <form method="POST" action="{{ url_for('admin.market_user_delete', user_id=user.userID) }}" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete user {{ user.name }}?')">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <nav>
+        <ul class="pagination justify-content-center">
+            {% if users.has_prev %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('admin.market_users', page=users.prev_num, role=role) }}">Previous</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+            {% endif %}
+
+            {% for p in users.iter_pages() %}
+                {% if p %}
+                    <li class="page-item {% if p == users.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.market_users', page=p, role=role) }}">{{ p }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if users.has_next %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('admin.market_users', page=users.next_num, role=role) }}">Next</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Next</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    {% else %}
+        <div class="alert alert-info text-center">No users found.</div>
+    {% endif %}
+</div>
+{% endblock %}
