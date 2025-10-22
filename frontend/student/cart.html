@@ -16,10 +16,8 @@
     </tr>
   </thead>
   <tbody>
-    {% set grand_total = 0 %}
     {% for item in cart_items %}
       {% set total = item.quantity * item.item.price %}
-      {% set grand_total = grand_total + total %}
       <tr>
         <td>{{ item.item.title }}</td>
         <td>₹{{ item.item.price }}</td>
@@ -52,6 +50,9 @@
 </form>
 
 {% else %}
-<div class="alert alert-info">Your cart is empty. Browse <a href="{{ url_for('student.marketplace') }}">marketplace</a> to add items!</div>
+<div class="alert alert-info">
+    Your cart is empty. Browse <a href="{{ url_for('student.marketplace') }}">marketplace</a> to add items!
+</div>
 {% endif %}
+
 {% endblock %}

@@ -17,45 +17,69 @@
   </thead>
   <tbody>
     {% for order in orders %}
-    {% set total = order.order_details | sum(attribute='price') %}
-    <tr>
-      <td>{{ order.orderID }}</td>
-      <td>{{ order.orderDate.strftime('%Y-%m-%d %H:%M') }}</td>
-      <td>{{ order.status }}</td>
-      <td>₹{{ total }}</td>
-      <td>
-        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#details-{{ order.orderID }}">
-          View
-        </button>
-      </td>
-    </tr>
-    <tr class="collapse" id="details-{{ order.orderID }}">
-      <td colspan="5">
-        <ul class="list-group">
-          {% for od in order.order_details %}
-            <li class="list-group-item d-flex justify-content-between">
-              {{ od.item.title }} × {{ od.quantity }} 
-              <span>₹{{ od.price }}</span>
-            </li>
-          {% endfor %}
-          {% if order.voucher %}
-          <li class="list-group-item d-flex justify-content-between">
-            <strong>Voucher Applied:</strong> {{ order.voucher.discountPercent }}% off
-            <span>-₹{{ order.voucher.applyVoucher(order) }}</span>
-          </li>
-          {% endif %}
-          <li class="list-group-item d-flex justify-content-between">
-            <strong>Grand Total:</strong>
-            <span>₹{{ order.order_details | sum(attribute='price') - (order.voucher.applyVoucher(order) if order.voucher else 0) }}</span>
-          </li>
-        </ul>
-      </td>
-    </tr>
+      {% set order_total = 0 %}
+      {% for od in order.order_details %}
+        {% set order_total = order_total + (od.price * od.quantity) %}
+      {% endfor %}
+      {% set discount = order.voucher.applyVoucher(order) if order.voucher else 0 %}
+      {% set grand_total = order_total - discount %}
+
+      <tr>
+        <td>{{ order.orderID }}</td>
+        <td>{{ order.orderDate.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <span class="badge bg-{{ 'success' if order.status=='Paid' else 'secondary' }}">{{ order.status }}</span>
+        </td>
+        <td>₹{{ grand_total }}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#details-{{ order.orderID }}">
+            View
+          </button>
+        </td>
+      </tr>
+
+      <tr class="collapse" id="details-{{ order.orderID }}">
+        <td colspan="5">
+          <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <strong>Order {{ order.orderID }}</strong>
+              <small>{{ order.orderDate.strftime('%d %b %Y, %H:%M') }}</small>
+            </div>
+            <ul class="list-group list-group-flush">
+              {% for od in order.order_details %}
+                {% set subtotal = od.price * od.quantity %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{{ od.item.title }}</strong> × {{ od.quantity }}<br>
+                    <small class="text-muted">
+                      Category: {{ od.item.category or '-' }} |
+                      Seller: {{ od.item.seller.userID }} - {{ od.item.seller.name }}
+                    </small>
+                  </div>
+                  <div>₹{{ subtotal }}</div>
+                </li>
+              {% endfor %}
+              {% if order.voucher %}
+                <li class="list-group-item d-flex justify-content-between">
+                  <strong>Voucher Applied:</strong> {{ order.voucher.discountPercent }}% off
+                  <span>-₹{{ discount }}</span>
+                </li>
+              {% endif %}
+              <li class="list-group-item d-flex justify-content-between">
+                <strong>Grand Total:</strong>
+                <span>₹{{ grand_total }}</span>
+              </li>
+            </ul>
+          </div>
+        </td>
+      </tr>
     {% endfor %}
   </tbody>
 </table>
-
 {% else %}
-<div class="alert alert-info">You haven't placed any orders yet. Browse the <a href="{{ url_for('student.marketplace') }}">marketplace</a> to shop!</div>
+<div class="alert alert-info">
+  You haven't placed any orders yet. Browse the <a href="{{ url_for('student.marketplace') }}">marketplace</a> to shop!
+</div>
 {% endif %}
+
 {% endblock %}

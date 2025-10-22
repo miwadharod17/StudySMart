@@ -14,13 +14,20 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(50), default='student')
 
-    orders = db.relationship('Order', backref='user', lazy=True)
+    # Seller relationship — items sold by this user
+    items_sold = db.relationship('Item', back_populates='seller', lazy=True)
+
+    # Buyer relationship — orders placed by this user
+    purchased_orders = db.relationship('Order', back_populates='buyer', lazy=True)
+
+    # Other relationships
     cart_items = db.relationship('ShoppingCart', backref='user', lazy=True)
     feedbacks = db.relationship('Feedback', backref='user', lazy=True)
     forum_posts = db.relationship('ForumPost', backref='user', lazy=True)
     forum_comments = db.relationship('ForumComment', backref='user', lazy=True)
     bills = db.relationship('BillInvoice', backref='user', lazy=True)
-    
+
+
     def set_password(self, password):
         self.password = generate_password_hash(password)
 
@@ -63,11 +70,13 @@ class Item(db.Model):
     category = db.Column(db.String(100))
     price = db.Column(db.Float, nullable=False)
     availability = db.Column(db.Integer, default=0)
-    sellerID = db.Column(db.Integer)
+
+    # Foreign key to seller (User)
+    sellerID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
+    seller = db.relationship('User', back_populates='items_sold')
 
     feedbacks = db.relationship('Feedback', backref='item', lazy=True)
     orders = db.relationship('OrderDetails', backref='item', lazy=True)
-
     def uploadImage(self):
         print(f"Image uploaded for item: {self.title}")
 
@@ -122,8 +131,12 @@ class Order(db.Model):
     orderID = db.Column(db.Integer, primary_key=True)
     orderDate = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), default='Pending')
-    userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
-    voucherID = db.Column(db.Integer, db.ForeignKey('voucher.voucherID'))
+
+    # Foreign key to buyer (User)
+    buyerID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
+    buyer = db.relationship('User', back_populates='purchased_orders')
+
+    voucherID = db.Column(db.Integer, db.ForeignKey('voucher.voucherID'), nullable=True)
 
     order_details = db.relationship('OrderDetails', backref='order', lazy=True)
 

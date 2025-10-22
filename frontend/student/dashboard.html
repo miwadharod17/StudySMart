@@ -51,31 +51,28 @@
 <div class="sidebar">
   <h4>Student Panel</h4>
   <a href="{{ url_for('student.marketplace') }}" class="nav-link {% if active_page == 'marketplace' %}active{% endif %}">
-  🛒 Marketplace
+  Marketplace
 </a>
 
-  <a href="{{ url_for('student.add_item') }}"
-     class="nav-link {% if active_page == 'add_item' %}active{% endif %}">
-     ➕ Add Item to Sell
-  </a>
-  <a href="{{ url_for('student.add_item') }}" class="nav-link {% if active_page == 'sell' %}active{% endif %}">
-  📦 Sell Item
+  
+  <a href="{{ url_for('student.my_items') }}" class="nav-link {% if active_page == 'sell' %}active{% endif %}">
+  My Items
 </a>
 
   <a href="{{ url_for('student.cart') }}"
    class="nav-link {% if active_page == 'cart' %}active{% endif %}">
-   🛒 My Cart
+   My Cart
 </a>
 <a href="{{ url_for('student.orders') }}" class="nav-link {% if active_page == 'orders' %}active{% endif %}">
-  🧾 My Orders
+  My Orders
 </a>
 
   <a href="{{ url_for('student.forum') }}"
      class="nav-link {% if active_page == 'forum' %}active{% endif %}">
-     💬 Forum (Posts & Comments)
+    Forum
   </a>
   <a href="{{ url_for('auth.login_role',role='student') }}" class="nav-link text-danger">
-     🚪 Logout
+     Logout
   </a>
 </div>
 

@@ -389,21 +389,47 @@ def add_to_cart(item_id):
     quantity = int(request.form.get("quantity", 1))
     ShoppingCart.addToCart(current_user, item, quantity)
     flash(f"Added {quantity} × {item.title} to your cart.", "success")
-    return redirect(url_for("student.marketplace"))
+    return redirect(url_for("student.cart"))
 
-@student_bp.route("/add-item", methods=["GET", "POST"])
+@student_bp.route('/student/add_item', methods=['GET', 'POST'])
 @login_required
 def add_item():
-    if request.method == "POST":
-        title = request.form["title"]
-        price = float(request.form["price"])
-        desc = request.form["category"]
-        new_item = Item(title=title, price=price, category=desc, sellerID=current_user.userID)
-        db.session.add(new_item)
-        db.session.commit()
-        flash("Item added successfully!", "success")
-        return redirect(url_for("student.marketplace"))
-    return render_template("student/add_item.html", active_page="add_item")
+    # Only allow students to add items
+    if current_user.role != 'student':
+        flash("Unauthorized access", "danger")
+        return redirect(url_for('student.dashboard'))
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        category = request.form.get('category')
+        price = request.form.get('price')
+        availability = request.form.get('availability', 0)
+
+        # Basic validation
+        if not title or not price:
+            flash("Title and price are required.", "warning")
+            return redirect(url_for('student.add_item'))
+
+        try:
+            new_item = Item(
+                title=title,
+                category=category,
+                price=float(price),
+                availability=int(availability),
+                sellerID=current_user.userID  # ✅ assign current student as seller
+            )
+
+            db.session.add(new_item)
+            db.session.commit()
+
+            flash(f"Item '{title}' added successfully!", "success")
+            return redirect(url_for('student.dashboard'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error adding item: {e}", "danger")
+
+    return render_template('student/add_item.html')
 
 @student_bp.route("/forum")
 @login_required
@@ -461,22 +487,128 @@ def remove_from_cart(cart_id):
     return redirect(url_for("student.cart"))
 
 
-@student_bp.route("/checkout", methods=["POST"])
-@login_required
-def checkout():
-    cart_items = ShoppingCart.query.filter_by(userID=current_user.userID).all()
-    if not cart_items:
-        flash("Your cart is empty.", "warning")
-        return redirect(url_for("student.cart"))
-
-    order = Order(userID=current_user.userID)
-    msg = order.placeOrder(cart_items)
-    flash(msg, "success" if "placed" in msg else "danger")
-    return redirect(url_for("student.cart"))
-
-
 @student_bp.route("/orders")
 @login_required
 def orders():
-    orders = Order.query.filter_by(userID=current_user.userID).order_by(Order.orderDate.desc()).all()
+    orders = Order.query.filter_by(buyerID=current_user.userID).order_by(Order.orderDate.desc()).all()
     return render_template("student/orders.html", orders=orders, active_page="orders")
+
+@student_bp.route('/student/my_items')
+@login_required
+def my_items():
+    # Only allow students
+    if current_user.role != 'student':
+        flash("Unauthorized access", "danger")
+        return redirect(url_for('student.dashboard'))
+
+    # Fetch items where sellerID = current user
+    items = Item.query.filter_by(sellerID=current_user.userID).all()
+    return render_template('student/my_items.html', items=items)
+
+@student_bp.route('/student/item/<int:item_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_item(item_id):
+    # Fetch the item or 404
+    item = Item.query.get_or_404(item_id)
+
+    # Only allow the seller to edit their own items
+    if item.sellerID != current_user.userID:
+        flash("Unauthorized access", "danger")
+        return redirect(url_for('student.my_items'))
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        category = request.form.get('category')
+        price = request.form.get('price')
+        availability = request.form.get('availability')
+
+        # Basic validation
+        if not title or not price:
+            flash("Title and price are required.", "warning")
+            return redirect(url_for('student.edit_item', item_id=item_id))
+
+        try:
+            item.title = title
+            item.category = category
+            item.price = float(price)
+            item.availability = int(availability)
+            
+            db.session.commit()
+            flash(f"Item '{title}' updated successfully!", "success")
+            return redirect(url_for('student.my_items'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating item: {e}", "danger")
+
+    # GET request - render form with current item details
+    return render_template('student/edit_item.html', item=item)
+
+
+@student_bp.route('/student/item/<int:item_id>/delete', methods=['POST'])
+@login_required
+def delete_item(item_id):
+    item = Item.query.get_or_404(item_id)
+    if item.sellerID != current_user.userID:
+        abort(403)
+    db.session.delete(item)
+    db.session.commit()
+    flash("Item deleted successfully.", "success")
+    return redirect(url_for('student.my_items'))
+
+from sqlalchemy.orm import joinedload
+from datetime import datetime
+
+@student_bp.route('/student/checkout', methods=['POST'])
+@login_required
+def checkout():
+    from sqlalchemy.orm import joinedload
+    import traceback
+    try:
+        cart_items = ShoppingCart.query.options(joinedload(ShoppingCart.item)) \
+            .filter_by(userID=current_user.userID).all()
+
+        if not cart_items:
+            flash("Your cart is empty.", "info")
+            return redirect(url_for('student.cart'))
+
+        # 1️⃣ Create new Order
+        new_order = Order(
+            buyerID=current_user.userID,
+            status='Paid',
+            orderDate=datetime.utcnow()
+        )
+        db.session.add(new_order)
+        db.session.flush()  # Get orderID
+
+        # 2️⃣ Create OrderDetails and update item availability
+        for cart_item in cart_items:
+            if not cart_item.item:
+                continue
+
+            od = OrderDetails(
+                orderID=new_order.orderID,
+                itemID=cart_item.item.itemID,
+                quantity=cart_item.quantity,
+                price=cart_item.item.price
+            )
+            db.session.add(od)
+
+            # Decrease item availability
+            cart_item.item.availability -= cart_item.quantity
+            if cart_item.item.availability < 0:
+                cart_item.item.availability = 0
+
+        # 3️⃣ Clear cart
+        for ci in cart_items:
+            db.session.delete(ci)
+
+        db.session.commit()
+        flash("Payment successful! Your order has been placed.", "success")
+        return redirect(url_for('student.orders'))
+
+    except Exception as e:
+        db.session.rollback()
+        traceback.print_exc()
+        flash(f"Error during checkout: {e}", "danger")
+        return redirect(url_for('student.cart'))
