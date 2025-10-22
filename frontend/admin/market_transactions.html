@@ -24,7 +24,7 @@
                 {% for order in orders.items %}
                 <tr>
                     <td>{{ order.orderID }}</td>
-                    <td>{{ order.user.name }}</td>
+                    <td>{{ order.buyer.name }} ({{ order.buyer.email }})</td>
                     <td><span class="badge bg-{{ 'success' if order.status == 'Placed' else 'secondary' }}">{{ order.status }}</span></td>
                     <td>{{ order.orderDate.strftime('%d %b %Y, %I:%M %p') }}</td>
                     <td>{{ order.voucherID or '—' }}</td>

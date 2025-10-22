@@ -9,8 +9,8 @@
 
   <div class="card mb-4 shadow-sm">
     <div class="card-body">
-      <h5 class="card-title">Order #{{ order.orderID }}</h5>
-      <p><strong>User:</strong> {{ order.user.name }} ({{ order.user.email }})</p>
+      <h5 class="card-title">Order {{ order.orderID }}</h5>
+      <p><strong>User:</strong> {{ order.buyer.name }} ({{ order.buyer.email }})</p>
       <p><strong>Status:</strong> 
         <span class="badge bg-{{ 'success' if order.status == 'Placed' else 'secondary' }}">{{ order.status }}</span>
       </p>
@@ -20,7 +20,7 @@
   </div>
 
   <h5 class="fw-semibold mb-3">Ordered Items</h5>
-  {% if order.items %}
+  {% if order.order_details %}
   <div class="table-responsive">
     <table class="table table-bordered align-middle">
       <thead class="table-danger">
@@ -29,18 +29,29 @@
           <th>Title</th>
           <th>Quantity</th>
           <th>Price (₹)</th>
+          <th>Subtotal (₹)</th>
         </tr>
       </thead>
       <tbody>
-        {% for item in order.items %}
-        <tr>
-          <td>{{ item.itemID }}</td>
-          <td>{{ item.title }}</td>
-          <td>{{ item.quantity or 1 }}</td>
-          <td>{{ "%.2f"|format(item.price) }}</td>
-        </tr>
+        {% set grand_total = 0 %}
+        {% for od in order.order_details %}
+          {% set subtotal = od.price * od.quantity %}
+          {% set grand_total = grand_total + subtotal %}
+          <tr>
+            <td>{{ od.item.itemID }}</td>
+            <td>{{ od.item.title }}</td>
+            <td>{{ od.quantity }}</td>
+            <td>{{ "%.2f"|format(od.price) }}</td>
+            <td>{{ "%.2f"|format(subtotal) }}</td>
+          </tr>
         {% endfor %}
       </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="4" class="text-end">Grand Total:</th>
+          <th>₹{{ "%.2f"|format(grand_total) }}</th>
+        </tr>
+      </tfoot>
     </table>
   </div>
   {% else %}
