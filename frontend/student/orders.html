@@ -30,7 +30,7 @@
         <td>
           <span class="badge bg-{{ 'success' if order.status=='Paid' else 'secondary' }}">{{ order.status }}</span>
         </td>
-        <td>₹{{ grand_total }}</td>
+        <td>₹{{ "%.2f"|format(order.bill.amount) }}</td>
         <td>
           <button class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#details-{{ order.orderID }}">
             View
@@ -67,7 +67,7 @@
               {% endif %}
               <li class="list-group-item d-flex justify-content-between">
                 <strong>Grand Total:</strong>
-                <span>₹{{ grand_total }}</span>
+                <span>₹{{ "%.2f"|format(order.bill.amount) }}</span>
               </li>
             </ul>
           </div>

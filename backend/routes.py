@@ -559,6 +559,10 @@ def delete_item(item_id):
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 
+from datetime import datetime
+from flask_login import current_user
+from backend.models import db, Order, BillInvoice, OrderDetails
+
 @student_bp.route('/student/checkout', methods=['POST'])
 @login_required
 def checkout():
@@ -579,13 +583,15 @@ def checkout():
             orderDate=datetime.utcnow()
         )
         db.session.add(new_order)
-        db.session.flush()  # Get orderID
+        db.session.flush()  # Get orderID for invoice linkage
 
-        # 2️⃣ Create OrderDetails and update item availability
+        # 2️⃣ Calculate total amount
+        total_amount = 0
         for cart_item in cart_items:
             if not cart_item.item:
                 continue
 
+            # Create order details
             od = OrderDetails(
                 orderID=new_order.orderID,
                 itemID=cart_item.item.itemID,
@@ -594,17 +600,33 @@ def checkout():
             )
             db.session.add(od)
 
-            # Decrease item availability
+            # Update stock
             cart_item.item.availability -= cart_item.quantity
             if cart_item.item.availability < 0:
                 cart_item.item.availability = 0
 
-        # 3️⃣ Clear cart
+            # Calculate total (price × quantity)
+            total_amount += cart_item.item.price * cart_item.quantity
+
+        # 3️⃣ Create BillInvoice
+        new_invoice = BillInvoice(
+            amount=total_amount,
+            paymentDate=datetime.utcnow(),
+            paymentMethod='Online',
+            status='Paid',
+            userID=current_user.userID,
+            orderID=new_order.orderID  # ✅ ensure orderID is linked
+        )
+        db.session.add(new_invoice)
+
+        # 4️⃣ Clear the cart
         for ci in cart_items:
             db.session.delete(ci)
 
+        # 5️⃣ Commit all
         db.session.commit()
-        flash("Payment successful! Your order has been placed.", "success")
+
+        flash("Payment successful! Your order and invoice have been generated.", "success")
         return redirect(url_for('student.orders'))
 
     except Exception as e:

@@ -137,6 +137,7 @@ class Order(db.Model):
     buyer = db.relationship('User', back_populates='purchased_orders')
 
     voucherID = db.Column(db.Integer, db.ForeignKey('voucher.voucherID'), nullable=True)
+    bill = db.relationship('BillInvoice', back_populates='order', uselist=False)
 
     order_details = db.relationship('OrderDetails', backref='order', lazy=True)
 
@@ -310,6 +311,11 @@ class BillInvoice(db.Model):
     status = db.Column(db.String(50), default='Pending')
     userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
 
+    orderID = db.Column(db.Integer, db.ForeignKey('order.orderID'), nullable=False)
+
+    # Optional: relationship back to order (if you want to access invoice.order)
+    order = db.relationship('Order', back_populates='bill')
+    
     def generateBillInvoice(self):
         self.status = "Generated"
         try:
