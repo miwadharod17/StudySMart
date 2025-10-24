@@ -1,0 +1,14 @@
+/* frontend/src/index.css */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fa;
+}
+
+h1, h3, h4 {
+  color: #f1eeee;
+}
+
+.container {
+  padding: 20px;
+}
