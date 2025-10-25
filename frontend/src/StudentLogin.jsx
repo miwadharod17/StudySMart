@@ -12,7 +12,7 @@ function StudentLogin() {
 
     // TODO: Call backend API for student login
     // On successful login, redirect to student dashboard
-    navigate('/student'); 
+  navigate('/student'); 
    };
 
   return (
@@ -108,7 +108,7 @@ function StudentLogin() {
         <p style={{ marginTop: '20px', fontSize: '0.95rem' }}>
           Not registered?{' '}
           <span
-            onClick={() => navigate('/student/register')}
+            onClick={() => navigate('/StudentRegister')}
             style={{ color: '#6f42c1', fontWeight: '600', cursor: 'pointer' }}
           >
             Create an account

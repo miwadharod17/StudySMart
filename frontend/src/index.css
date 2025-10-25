@@ -12,3 +12,188 @@ h1, h3, h4 {
 .container {
   padding: 20px;
 }
+/* --- PURPLE THEME --- */
+.text-purple {
+  color: #6a1b9a !important;
+}
+
+.btn-purple {
+  background-color: #6a1b9a !important;
+  border-color: #6a1b9a !important;
+  color: white !important;
+}
+
+.btn-purple:hover {
+  background-color: #4a0072 !important;
+}
+
+.border-purple {
+  border: 2px solid #6a1b9a !important;
+}
+
+.table-purple {
+  background-color: #6a1b9a !important;
+}
+
+/* === PURPLE THEME === */
+.text-purple {
+  color: #6a1b9a !important;
+}
+
+.btn-purple {
+  background-color: #6a1b9a !important;
+  border-color: #6a1b9a !important;
+  color: white !important;
+  transition: all 0.2s ease;
+}
+
+.btn-purple:hover {
+  background-color: #4a0072 !important;
+  transform: translateY(-1px);
+}
+
+.border-purple {
+  border: 2px solid #6a1b9a !important;
+}
+
+.table-purple {
+  background-color: #6a1b9a !important;
+}
+
+/* === GENERAL ENHANCEMENTS === */
+/* === PURPLE THEME (using #6f42c1) === */
+.text-purple {
+  color: #6f42c1 !important;
+}
+
+.btn-purple {
+  background-color: #6f42c1 !important;
+  border-color: #6f42c1 !important;
+  color: white !important;
+  transition: all 0.2s ease;
+}
+
+.btn-purple:hover {
+  background-color: #5a32a3 !important;
+  transform: translateY(-1px);
+}
+
+.border-purple {
+  border: 2px solid #6f42c1 !important;
+}
+
+.table-purple {
+  background-color: #6f42c1 !important;
+}
+
+/* === SEARCH BAR === */
+.search-form {
+  width: 450px; /* Increased width */
+}
+
+.search-input {
+  font-size: 1.1rem;
+  height: 50px;
+}
+
+/* === GENERAL ENHANCEMENTS === */
+.table th,
+.table td {
+  vertical-align: middle !important;
+  font-size: 1rem;
+}
+
+h2 {
+  font-weight: 800;
+  font-size: 2rem;
+  color: #6f42c1;
+}
+
+input.form-control {
+  font-weight: 500;
+}
+
+.alert-info {
+  background-color: #f3e5f5 !important;
+  color: #5a32a3 !important;
+  border-color: #d1c4e9 !important;
+}
+/* === SEARCH BAR ENHANCEMENTS === */
+
+
+/* === SEARCH BAR STYLING === */
+.search-form {
+  width: 500px; /* overall form width */
+  display: flex;
+  gap: 10px; /* space between input and button */
+}
+
+.search-input {
+  font-size: 1.2rem;          /* bigger font */
+  height: 55px;               /* taller search box */
+  border-radius: 30px;        /* curved edges */
+  padding-left: 20px;
+  flex-grow: 1;               /* input takes remaining space */
+  border: 2px solid #6f42c1; /* purple border */
+}
+
+.search-form .btn-purple {
+  height: 55px;               /* match input height */
+  font-size: 1.2rem;          /* same font size */
+  border-radius: 30px;        /* curved edges */
+  padding: 0 25px;            /* horizontal padding */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.text-purple {
+  color: #6f42c1;
+}
+
+.btn-purple {
+  background-color: #6f42c1;
+  color: #fff;
+  border: none;
+}
+
+.btn-purple:hover {
+  background-color: #5a379e;
+  color: #fff;
+}
+
+.btn-heart {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.comment-section {
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+
+.text-purple {
+  color: #6f42c1;
+}
+
+/* Heart button */
+.btn-heart {
+  background-color: #6f42c1;
+  color: white;
+  border: none;
+  padding: 5px 12px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.btn-heart:hover {
+  transform: scale(1.2);
+}
+

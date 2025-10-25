@@ -15,13 +15,14 @@ import StudentRegister from "./StudentRegister";
 
 // Student Dashboard
 import DashboardLayout from "./StudentDashboardLayout";
-import AddItem from "./student/AddItem";
-import EditItem from "./student/EditItem";
-import Forum from "./student/Forum";
-import ForumPostDetail from "./student/ForumPostDetail";
-import Marketplace from "./student/Marketplace";
-import MyItems from "./student/MyItems";
-import Orders from "./student/Orders";
+import Marketplace from "./StudentMarketplace";
+import MyItems from "./StudentMyItems";
+import Orders from "./StudentOrders";
+import Forum from "./StudentForum";
+import ForumPostDetail from "./StudentForumPostDetail";
+import AddItem from "./StudentAddItem";
+import EditItem from "./StudentEditItem";
+import Cart from "./StudentCart";
 
 // Admin Authentication
 import AdminLogin from "./AdminLogin";
@@ -29,14 +30,14 @@ import AdminRegister from "./AdminRegister";
 
 // Admin Dashboard
 import AdminDashboard from "./AdminDashboard";
-import ForumComments from "./admin/ForumComments";
-import ForumPosts from "./admin/ForumPosts";
-import MarketItemDetail from "./admin/MarketItemDetail";
-import MarketItems from "./admin/MarketItems";
-import MarketTransactionDetail from "./admin/MarketTransactionDetail";
-import MarketTransactions from "./admin/MarketTransactions";
-import MarketUserForm from "./admin/MarketUserForm";
-import MarketUsers from "./admin/MarketUsers";
+import ForumComments from "./AdminForumComments";
+import ForumPosts from "./AdminForumPosts";
+import MarketItemDetail from "./AdminMarketItemDetail";
+import MarketItems from "./AdminMarketItems";
+import MarketTransactionDetail from "./AdminMarketTransactionDetail";
+import MarketTransactions from "./AdminMarketTransactions";
+import MarketUserForm from "./AdminMarketUserForm";
+import MarketUsers from "./AdminMarketUsers";
 
 // Vendor Authentication
 import VendorLogin from "./VendorLogin";
@@ -54,24 +55,27 @@ function App() {
         <Route path="/StudentLogin" element={<StudentLogin />} />
         <Route path="/StudentRegister" element={<StudentRegister />} />
 
-        {/* Student Dashboard */}
-        <Route path="/student" element={<DashboardLayout />}>
-          <Route index element={<Navigate to="Marketplace" />} />
-          <Route path="AddItem" element={<AddItem />} />
-          <Route path="edit-item/:itemId" element={<EditItem />} />
-          <Route path="MyItems" element={<MyItems />} />
-          <Route path="Orders" element={<Orders />} />
-          <Route path="Marketplace" element={<Marketplace />} />
-          <Route path="Forum" element={<Forum />} />
-          <Route path="Forum/:postId" element={<ForumPostDetail />} />
-        </Route>
+        {/* Student Dashboard Layout Wrapping Each Feature */}
+      <Route path="/student" element={<DashboardLayout />}>
+      <Route path="marketplace" element={<Marketplace />} />
+      <Route path="myitems" element={<MyItems />} />
+      <Route path="cart" element={<Cart />} />
+      <Route path="orders" element={<Orders />} />
+      <Route path="forum" element={<Forum />} />
+      <Route path="forum/:postId" element={<ForumPostDetail />} />
+      <Route path="additem" element={<AddItem />} />
+      <Route path="edititem/:itemId" element={<EditItem />} />
+      {/* ❌ Remove the redirect line below */}
+      {/* <Route index element={<Navigate to="marketplace" />} /> */}
+    </Route>
+
 
         {/* Admin Authentication */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/register" element={<AdminRegister />} />
+        <Route path="/Adminlogin" element={<AdminLogin />} />
+        <Route path="/Adminregister" element={<AdminRegister />} />
 
         {/* Admin Dashboard */}
-        <Route path="/admin/dashboard" element={<AdminDashboard />}>
+        <Route path="/Admindashboard" element={<AdminDashboard />}>
           <Route index element={<Navigate to="users" />} />
           <Route path="users" element={<MarketUsers />} />
           <Route path="users/add" element={<MarketUserForm />} />
