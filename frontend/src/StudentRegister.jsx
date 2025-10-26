@@ -7,12 +7,42 @@ function StudentRegister() {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    console.log({ name, email, password });
-    // TODO: Call backend API for student registration
-    // On success: navigate('/student/login');
-  };
+  const handleRegister = async (e) => {
+  e.preventDefault();
+
+  try {
+    // Send POST request to backend with role included
+    const response = await fetch("http://127.0.0.1:5000/register/student", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        role: "student", // explicitly set student role
+      }),
+    });
+
+    // Parse JSON response from backend
+    const data = await response.json();
+
+    if (response.ok) {
+      // Registration successful
+      alert("Registration successful! You can now login.");
+      navigate("/StudentLogin"); // redirect to login page
+    } else {
+      // Registration failed
+      alert(`Registration failed: ${data.message || "Unknown error"}`);
+    }
+  } catch (error) {
+    console.error("Error during registration:", error);
+    alert("An error occurred. Please try again.");
+  }
+};
+
+
 
   return (
     <div

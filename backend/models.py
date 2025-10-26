@@ -6,28 +6,24 @@ from flask_login import UserMixin
 db = SQLAlchemy()
 
 # ===================== USER =====================
-
 class User(db.Model, UserMixin):
     userID = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(50), default='student')
+    role = db.Column(db.String(50), default='student')  # student, vendor, admin
 
-    # Seller relationship — items sold by this user
+    # Relationships
     items_sold = db.relationship('Item', back_populates='seller', lazy=True)
-
-    # Buyer relationship — orders placed by this user
     purchased_orders = db.relationship('Order', back_populates='buyer', lazy=True)
-
-    # Other relationships
     cart_items = db.relationship('ShoppingCart', backref='user', lazy=True)
     feedbacks = db.relationship('Feedback', backref='user', lazy=True)
     forum_posts = db.relationship('ForumPost', backref='user', lazy=True)
     forum_comments = db.relationship('ForumComment', backref='user', lazy=True)
+    forum_likes = db.relationship('ForumLike', backref='user', lazy=True)
     bills = db.relationship('BillInvoice', backref='user', lazy=True)
 
-
+    # Password methods
     def set_password(self, password):
         self.password = generate_password_hash(password)
 
@@ -37,25 +33,33 @@ class User(db.Model, UserMixin):
     def get_id(self):
         return str(self.userID)
 
-    def login(self):
-        print(f"{self.name} logged in.")
+    # Role-based actions
+    def can_sell(self):
+        return self.role in ['student', 'vendor']
 
-    def logout(self):
-        print(f"{self.name} logged out.")
+    def can_purchase(self):
+        return self.role == 'student'
 
-    def notify(self, message):
-        print(f"Notification for {self.name}: {message}")
+    def can_post_forum(self):
+        return self.role == 'student'
 
-    def receiveBill(self, bill):
-        print(f"{self.name} received bill ID: {bill.billID}")
+    def can_like_forum(self):
+        return self.role == 'student'
 
+    def can_provide_voucher(self):
+        return self.role == 'vendor'
+
+    def can_approve(self):
+        return self.role == 'admin'
+
+    # Checkout method
     def checkout_cart(self, voucher=None, payment_method='Cash'):
         if not self.cart_items:
             return "Cart is empty."
-
-        order = Order(userID=self.userID, voucherID=voucher.voucherID if voucher else None)
+        if not self.can_purchase():
+            return "Permission denied."
+        order = Order(buyerID=self.userID, voucherID=voucher.voucherID if voucher else None)
         try:
-            # Place order and commit in a single atomic transaction
             result_message = order.placeOrder(cart_items=self.cart_items, voucher=voucher, payment_method=payment_method)
             return result_message
         except Exception as e:
@@ -63,40 +67,52 @@ class User(db.Model, UserMixin):
             return f"Error during checkout: {e}"
 
 # ===================== ITEM =====================
-
 class Item(db.Model):
     itemID = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     category = db.Column(db.String(100))
+    description = db.Column(db.String(500))
     price = db.Column(db.Float, nullable=False)
     availability = db.Column(db.Integer, default=0)
+    image = db.Column(db.String(200))
+    rating = db.Column(db.Float, default=0)
+    reviews = db.Column(db.Integer, default=0)
+    is_approved = db.Column(db.Boolean, default=True)  # Admin approval
 
-    # Foreign key to seller (User)
+    # Seller
     sellerID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
     seller = db.relationship('User', back_populates='items_sold')
 
     feedbacks = db.relationship('Feedback', backref='item', lazy=True)
     orders = db.relationship('OrderDetails', backref='item', lazy=True)
-    def uploadImage(self):
-        print(f"Image uploaded for item: {self.title}")
+    cart_items = db.relationship('ShoppingCart', backref='item', lazy=True)
 
-    def buyItem(self):
-        return f"{self.title} purchased successfully."
-
-    def sellItem(self):
-        return f"{self.title} listed for sale."
-
-    def updateQuantity(self, new_qty):
-        self.availability = new_qty
+    # Methods
+    def sellItem(self, user):
+        if not user.can_sell():
+            return "Permission denied."
+        self.is_approved = True  # Needs admin approval
         try:
+            db.session.add(self)
             db.session.commit()
-            print(f"Quantity updated for {self.title} to {new_qty}")
+            return f"{self.title} listed for sale. Pending admin approval."
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating quantity: {e}")
+            return f"Error listing item: {e}"
 
-# ===================== VOUCHER (Moved Up) =====================
+    def update_rating(self):
+        if not self.feedbacks:
+            self.rating = 0
+            self.reviews = 0
+        else:
+            self.reviews = len(self.feedbacks)
+            self.rating = sum(f.rating for f in self.feedbacks) / self.reviews
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
+# ===================== VOUCHER =====================
 class Voucher(db.Model):
     voucherID = db.Column(db.Integer, primary_key=True)
     discountPercent = db.Column(db.Float)
@@ -104,63 +120,37 @@ class Voucher(db.Model):
 
     orders = db.relationship('Order', backref='voucher', lazy=True)
 
-    def applyVoucher(self, order):
-        total = sum(od.price for od in order.order_details)
-        discount = (self.discountPercent / 100) * total
-        print(f"Voucher applied. Discount: ₹{discount:.2f}")
-        return discount
-
-    def createVoucher(self, discountPercent, expiryDate):
-        self.discountPercent = discountPercent
-        self.expiryDate = expiryDate
-        try:
-            db.session.add(self)
-            db.session.commit()
-            print(f"Voucher {self.voucherID} created with {discountPercent}% discount")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error creating voucher: {e}")
-    
     def isValid(self):
         return datetime.utcnow() <= self.expiryDate
 
-
 # ===================== ORDER =====================
-
 class Order(db.Model):
     orderID = db.Column(db.Integer, primary_key=True)
     orderDate = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), default='Pending')
 
-    # Foreign key to buyer (User)
     buyerID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
     buyer = db.relationship('User', back_populates='purchased_orders')
 
     voucherID = db.Column(db.Integer, db.ForeignKey('voucher.voucherID'), nullable=True)
     bill = db.relationship('BillInvoice', back_populates='order', uselist=False)
-
     order_details = db.relationship('OrderDetails', backref='order', lazy=True)
 
     def placeOrder(self, cart_items, voucher=None, payment_method='Cash'):
-        if not cart_items:
-            return "Cart is empty."
-
         total_amount = 0
         original_stocks = {}
 
         try:
-            # 1. Check stock
+            # Check stock
             for cart_item in cart_items:
                 if cart_item.quantity > cart_item.item.availability:
-                    return f"Insufficient stock for {cart_item.item.title} (Available: {cart_item.item.availability})"
-                # Save original stock for potential rollback
+                    return f"Insufficient stock for {cart_item.item.title}."
                 original_stocks[cart_item.item.itemID] = cart_item.item.availability
 
-            # 2. Add Order to DB
             db.session.add(self)
-            db.session.flush()  # Get orderID without committing
+            db.session.flush()  # get orderID
 
-            # 3. Add OrderDetails and update stock
+            # Add order details
             for cart_item in cart_items:
                 od = OrderDetails(
                     orderID=self.orderID,
@@ -170,35 +160,27 @@ class Order(db.Model):
                 )
                 db.session.add(od)
                 total_amount += od.price
-
-                # Update item stock
                 cart_item.item.availability -= cart_item.quantity
-
-                # Remove from cart
                 db.session.delete(cart_item)
 
-            # 4. Apply voucher if valid
             if voucher and voucher.isValid():
-                discount = voucher.applyVoucher(self)
+                discount = (voucher.discountPercent / 100) * total_amount
                 total_amount -= discount
 
-            # 5. Generate bill
+            # Create bill
             bill = BillInvoice(
-                userID=self.userID,
+                userID=self.buyerID,
+                orderID=self.orderID,
                 amount=total_amount,
                 paymentMethod=payment_method
             )
             db.session.add(bill)
-            db.session.flush()  # Get billID before commit
-
-            # 6. Commit everything atomically
             self.status = "Placed"
             db.session.commit()
 
             return f"Order {self.orderID} placed. Bill {bill.billID} generated for ₹{total_amount:.2f}"
 
         except Exception as e:
-            # Rollback stock changes in memory (DB rollback will undo anyway)
             for item_id, stock in original_stocks.items():
                 item = Item.query.get(item_id)
                 if item:
@@ -206,30 +188,7 @@ class Order(db.Model):
             db.session.rollback()
             return f"Error during order placement: {e}"
 
-    def cancelOrder(self):
-        if self.status != "Placed":
-            print(f"Order {self.orderID} cannot be cancelled. Status: {self.status}")
-            return
-
-        try:
-            # 1. Restock items
-            for od in self.order_details:
-                od.item.availability += od.quantity
-
-            # 2. Update order status
-            self.status = "Cancelled"
-            db.session.commit()
-            print(f"Order {self.orderID} cancelled and stock restored.")
-
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error cancelling order: {e}")
-            
-    def viewOrders(self):
-        return f"Order ID: {self.orderID}, Status: {self.status}"
-
 # ===================== ORDER DETAILS =====================
-
 class OrderDetails(db.Model):
     orderDetailID = db.Column(db.Integer, primary_key=True)
     orderID = db.Column(db.Integer, db.ForeignKey('order.orderID'), nullable=False)
@@ -237,72 +196,15 @@ class OrderDetails(db.Model):
     quantity = db.Column(db.Integer, default=1)
     price = db.Column(db.Float, nullable=False)
 
-    def createOrder(self):
-        try:
-            db.session.add(self)
-            db.session.commit()
-            print(f"Order detail created for item ID {self.itemID}")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error creating order detail: {e}")
-
-    def storeOrder(self):
-        print(f"Order detail stored for order ID {self.orderID}")
-
 # ===================== SHOPPING CART =====================
-
 class ShoppingCart(db.Model):
     cartID = db.Column(db.Integer, primary_key=True)
     userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
     itemID = db.Column(db.Integer, db.ForeignKey('item.itemID'), nullable=False)
     quantity = db.Column(db.Integer, default=1)
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
-    item = db.relationship('Item', backref='cart_items', lazy=True)
-
-    def __repr__(self):
-        return f"<ShoppingCart(cartID={self.cartID}, userID={self.userID}, itemID={self.itemID}, quantity={self.quantity})>"
-
-    @staticmethod
-    def addToCart(user, item, qty):
-        cart_item = ShoppingCart.query.filter_by(userID=user.userID, itemID=item.itemID).first()
-        if cart_item:
-            cart_item.quantity += qty
-        else:
-            cart_item = ShoppingCart(userID=user.userID, itemID=item.itemID, quantity=qty)
-            db.session.add(cart_item)
-        try:
-            db.session.commit()
-            print(f"Added {qty} of {item.title} to {user.name}'s cart")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error adding to cart: {e}")
-    def viewCart(self):
-        return f"{self.item.title} × {self.quantity} (₹{self.item.price * self.quantity:.2f})"
-
-
-
-
-    def removeFromCart(self, item, qty=1):
-        try:
-            if self.itemID == item.itemID:
-                if self.quantity > qty:
-                    self.quantity -= qty
-                    db.session.commit()
-                    print(f"Reduced {item.title} by {qty} in cart ID {self.cartID}")
-                else:
-                    db.session.delete(self)
-                    db.session.commit()
-                    print(f"Removed {item.title} from cart ID {self.cartID}")
-            else:
-                print(f"Item {item.title} not found in this cart.")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error removing item: {e}")
-
-    
 
 # ===================== BILL INVOICE =====================
-
 class BillInvoice(db.Model):
     billID = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
@@ -310,26 +212,10 @@ class BillInvoice(db.Model):
     paymentMethod = db.Column(db.String(50))
     status = db.Column(db.String(50), default='Pending')
     userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
-
     orderID = db.Column(db.Integer, db.ForeignKey('order.orderID'), nullable=False)
-
-    # Optional: relationship back to order (if you want to access invoice.order)
     order = db.relationship('Order', back_populates='bill')
-    
-    def generateBillInvoice(self):
-        self.status = "Generated"
-        try:
-            db.session.commit()
-            print(f"Bill invoice {self.billID} generated for ₹{self.amount}")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error generating bill invoice: {e}")
-
-    def showInvoice(self):
-        return f"Bill ID: {self.billID}, Amount: ₹{self.amount}, Status: {self.status}"
 
 # ===================== FEEDBACK =====================
-
 class Feedback(db.Model):
     feedbackID = db.Column(db.Integer, primary_key=True)
     rating = db.Column(db.Integer, db.CheckConstraint('rating BETWEEN 1 AND 5'))
@@ -338,48 +224,35 @@ class Feedback(db.Model):
     itemID = db.Column(db.Integer, db.ForeignKey('item.itemID'), nullable=False)
 
     def giveFeedback(self):
+        # Only allow if user purchased item
+        purchase = OrderDetails.query.join(Order).filter(
+            Order.buyerID == self.userID,
+            OrderDetails.itemID == self.itemID
+        ).first()
+        if not purchase:
+            return "Cannot give feedback for items not purchased."
         try:
             db.session.add(self)
             db.session.commit()
-            print(f"Feedback {self.feedbackID} given by user {self.userID} for item {self.itemID}")
+            self.item.update_rating()
+            return f"Feedback added for item {self.itemID}"
         except Exception as e:
             db.session.rollback()
-            print(f"Error giving feedback: {e}")
+            return f"Error giving feedback: {e}"
 
 # ===================== FORUM POST =====================
-
 class ForumPost(db.Model):
     postID = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200))
     content = db.Column(db.String(1000))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
+    is_approved = db.Column(db.Boolean, default=True)
 
     comments = db.relationship('ForumComment', backref='forum_post', lazy=True)
-
-    def createPost(self):
-        try:
-            db.session.add(self)
-            db.session.commit()
-            print(f"Post {self.postID} created by user {self.userID}")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error creating post: {e}")
-
-    def approvePost(self):
-        print(f"Post {self.postID} approved by moderator")
-
-    def deletePost(self):
-        try:
-            db.session.delete(self)
-            db.session.commit()
-            print(f"Post {self.postID} deleted")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error deleting post: {e}")
+    likes = db.relationship('ForumLike', backref='forum_post', lazy=True)
 
 # ===================== FORUM COMMENT =====================
-
 class ForumComment(db.Model):
     commentID = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(500))
@@ -387,20 +260,8 @@ class ForumComment(db.Model):
     postID = db.Column(db.Integer, db.ForeignKey('forum_post.postID'), nullable=False)
     userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
 
-    def addComment(self):
-        try:
-            db.session.add(self)
-            db.session.commit()
-            print(f"Comment {self.commentID} added on post {self.postID}")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error adding comment: {e}")
-
-    def deleteComment(self):
-        try:
-            db.session.delete(self)
-            db.session.commit()
-            print(f"Comment {self.commentID} deleted from post {self.postID}")
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error deleting comment: {e}")
+# ===================== FORUM LIKE =====================
+class ForumLike(db.Model):
+    likeID = db.Column(db.Integer, primary_key=True)
+    postID = db.Column(db.Integer, db.ForeignKey('forum_post.postID'), nullable=False)
+    userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)

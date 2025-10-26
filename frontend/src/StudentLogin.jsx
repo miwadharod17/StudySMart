@@ -6,14 +6,39 @@ function StudentLogin() {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log({ email, password });
 
-    // TODO: Call backend API for student login
-    // On successful login, redirect to student dashboard
-  navigate('/student'); 
-   };
+    try {
+      const response = await fetch('http://127.0.0.1:5000/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Check if logged in user is actually a student
+        if (data.user.role !== 'student') {
+          alert('This login page is only for students.');
+          return;
+        }
+
+        // Successful login
+        alert(`Welcome ${data.user.name}!`);
+        navigate('/student'); // redirect to student dashboard
+      } else {
+        // Login failed
+        alert(data.error || 'Login failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('An error occurred. Please try again.');
+    }
+  };
 
   return (
     <div
