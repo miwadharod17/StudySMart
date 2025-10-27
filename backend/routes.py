@@ -9,6 +9,8 @@ from sqlalchemy.exc import SQLAlchemyError
 auth_bp = Blueprint('auth', __name__)
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 student_bp = Blueprint('student', __name__, url_prefix='/student')
+vendor_bp = Blueprint('vendor', __name__, url_prefix='/vendor')
+
 
 @auth_bp.route('/login/<role>', methods=['GET', 'POST'])
 def login_role(role):
@@ -25,7 +27,7 @@ def login_role(role):
             if role == 'admin':
                 return redirect(url_for('admin.dashboard'))
             elif role == 'vendor':
-                return redirect(url_for('vendor.dashboard'))
+                return redirect(url_for('vendor.dashboard_vendor'))
             elif role == 'student':
                 return redirect(url_for('student.dashboard'))
             else:
@@ -684,3 +686,121 @@ def view_post(post_id):
         return redirect(url_for('student_forum.view_post', post_id=post_id))
 
     return render_template('student/forum_post.html', post=post, comments=comments)
+
+
+#vendor
+@vendor_bp.route('/dashboard_vendor', endpoint='dashboard_vendor')
+@login_required
+def dashboard():
+    return render_template('vendor/dashboard.html')
+
+@vendor_bp.route('/vendor/add_item', methods=['GET', 'POST'])
+@login_required
+def add_item():
+    # Only allow students to add items
+    if current_user.role != 'vendor':
+        flash("Unauthorized access", "danger")
+        return redirect(url_for('vendor.dashboard'))
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        category = request.form.get('category')
+        price = request.form.get('price')
+        availability = request.form.get('availability', 0)
+
+        # Basic validation
+        if not title or not price:
+            flash("Title and price are required.", "warning")
+            return redirect(url_for('vendor.add_item'))
+
+        try:
+            new_item = Item(
+                title=title,
+                category=category,
+                price=float(price),
+                availability=int(availability),
+                sellerID=current_user.userID  # ✅ assign current student as seller
+            )
+
+            db.session.add(new_item)
+            db.session.commit()
+
+            flash(f"Item '{title}' added successfully!", "success")
+            return redirect(url_for('vendor.add_item'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error adding item: {e}", "danger")
+
+    return render_template('vendor/add_item.html')
+
+
+@vendor_bp.route('/vendor/my_items')
+@login_required
+def my_items():
+    # Only allow students
+    if current_user.role != 'vendor':
+        flash("Unauthorized access", "danger")
+        return redirect(url_for('vendor.dashboard'))
+
+    # Fetch items where sellerID = current user
+    items = Item.query.filter_by(sellerID=current_user.userID).all()
+    return render_template('vendor/my_items.html', items=items)
+
+@vendor_bp.route('/vendor/item/<int:item_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_item(item_id):
+    # Fetch the item or 404
+    item = Item.query.get_or_404(item_id)
+
+    # Only allow the seller to edit their own items
+    if item.sellerID != current_user.userID:
+        flash("Unauthorized access", "danger")
+        return redirect(url_for('vendor.my_items'))
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        category = request.form.get('category')
+        price = request.form.get('price')
+        availability = request.form.get('availability')
+
+        # Basic validation
+        if not title or not price:
+            flash("Title and price are required.", "warning")
+            return redirect(url_for('vendor.edit_item', item_id=item_id))
+
+        try:
+            item.title = title
+            item.category = category
+            item.price = float(price)
+            item.availability = int(availability)
+            
+            db.session.commit()
+            flash(f"Item '{title}' updated successfully!", "success")
+            return redirect(url_for('vendor.my_items'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating item: {e}", "danger")
+
+    # GET request - render form with current item details
+    return render_template('vendor/edit_item.html', item=item)
+
+
+@vendor_bp.route('/vendor/item/<int:item_id>/delete', methods=['POST'])
+@login_required
+def delete_item(item_id):
+    item = Item.query.get_or_404(item_id)
+    if item.sellerID != current_user.userID:
+        abort(403)
+    db.session.delete(item)
+    db.session.commit()
+    flash("Item deleted successfully.", "success")
+    return redirect(url_for('vendor.my_items'))
+
+from sqlalchemy.orm import joinedload
+from datetime import datetime
+
+from datetime import datetime
+from flask_login import current_user
+from backend.models import db, Order, BillInvoice, OrderDetails

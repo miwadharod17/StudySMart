@@ -1,13 +1,13 @@
 from flask import Flask, render_template
 from flask_login import LoginManager
 from backend.models import db, User
-from backend.routes import auth_bp, admin_bp, student_bp, student_forum_bp
+from backend.routes import auth_bp, admin_bp, student_bp, student_forum_bp , vendor_bp
 
 def createApp():
     app = Flask(__name__, template_folder='frontend')
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.sqlite3'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = 'your_secret_key_here'  # Required for Flask-Login sessions
+    app.config['SECRET_KEY'] = '123'  # Required for Flask-Login sessions
 
     # Initialize extensions
     db.init_app(app)
@@ -26,6 +26,7 @@ def createApp():
     app.register_blueprint(admin_bp) 
     app.register_blueprint(student_bp)
     app.register_blueprint(student_forum_bp)
+    app.register_blueprint(vendor_bp)
 
     # --- Home route ---
     @app.route('/')
