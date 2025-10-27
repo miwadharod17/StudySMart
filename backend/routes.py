@@ -296,7 +296,8 @@ def market_transaction_detail(order_id):
     order = Order.query.get_or_404(order_id)
     return render_template('admin/market_transaction_detail.html', order=order)
 
-# FORUM POSTS LIST
+
+# ===================== ADMIN: FORUM POSTS LIST =====================
 @admin_bp.route('/forum/posts')
 @login_required
 @admin_required
@@ -307,55 +308,45 @@ def forum_posts():
     return render_template('admin/forum_posts.html', posts=posts)
 
 
-# FORUM POST DETAIL & DELETE
+# ===================== ADMIN: FORUM POST DETAIL & DELETE =====================
 @admin_bp.route('/forum/posts/<int:post_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def forum_post_detail(post_id):
     post = ForumPost.query.get_or_404(post_id)
+    comments = ForumComment.query.filter_by(postID=post_id).order_by(ForumComment.timestamp.asc()).all()
 
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'delete':
+
+        # Delete entire post
+        if action == 'delete_post':
             try:
-                # Delete all comments first
                 for comment in post.comments:
                     comment.deleteComment()
                 post.deletePost()
-                flash(f'Post "{post.title}" deleted successfully', 'success')
+                flash(f'Post "{post.title}" deleted successfully.', 'success')
                 return redirect(url_for('admin.forum_posts'))
             except Exception as e:
                 db.session.rollback()
                 flash(f'Error deleting post: {e}', 'danger')
 
-    return render_template('admin/forum_post_detail.html', post=post)
+        # Delete individual comment
+        elif action.startswith('delete_comment_'):
+            try:
+                comment_id = int(action.split('_')[-1])
+                comment = ForumComment.query.filter_by(commentID=comment_id).first()
+                if comment:
+                    comment.deleteComment()
+                    flash('Comment deleted successfully.', 'success')
+                else:
+                    flash('Comment not found.', 'warning')
+                return redirect(url_for('admin.forum_post_detail', post_id=post_id))
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error deleting comment: {e}', 'danger')
 
-
-# FORUM COMMENTS LIST
-@admin_bp.route('/forum/comments')
-@login_required
-@admin_required
-def forum_comments():
-    page = request.args.get('page', 1, type=int)
-    per_page = 30
-    comments = ForumComment.query.order_by(ForumComment.timestamp.desc()).paginate(page=page, per_page=per_page)
-    return render_template('admin/forum_comments.html', comments=comments)
-
-
-# DELETE COMMENT
-@admin_bp.route('/forum/comments/<int:comment_id>/delete', methods=['POST'])
-@login_required
-@admin_required
-def forum_comment_delete(comment_id):
-    comment = ForumComment.query.get_or_404(comment_id)
-    try:
-        comment.deleteComment()
-        flash('Comment deleted successfully', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error deleting comment: {e}', 'danger')
-    return redirect(url_for('admin.forum_comments'))
-
+    return render_template('admin/forum_post_detail.html', post=post, comments=comments)
 
 
 @student_bp.route("/dashboard")
@@ -430,19 +421,6 @@ def add_item():
             flash(f"Error adding item: {e}", "danger")
 
     return render_template('student/add_item.html')
-
-@student_bp.route("/forum")
-@login_required
-def forum():
-    posts = ForumPost.query.order_by(ForumPost.timestamp.desc()).all()
-    return render_template("student/forum.html", posts=posts, active_page="forum")
-
-@student_bp.route("/forum/<int:post_id>")
-@login_required
-def forum_post_detail(post_id):
-    post = ForumPost.query.get_or_404(post_id)
-    return render_template("student/forum_post_detail.html", post=post, active_page="forum")
-
 
 @student_bp.route("/cart")
 @login_required
@@ -634,3 +612,75 @@ def checkout():
         traceback.print_exc()
         flash(f"Error during checkout: {e}", "danger")
         return redirect(url_for('student.cart'))
+
+
+
+student_forum_bp = Blueprint('student_forum', __name__)
+
+# ===================== ALL POSTS =====================
+@student_forum_bp.route('/student/forum', methods=['GET', 'POST'])
+@login_required
+def forum():
+    query = request.args.get('q', '').strip()
+    if query:
+        posts = ForumPost.query.filter(ForumPost.title.ilike(f'%{query}%')).order_by(ForumPost.timestamp.desc()).all()
+    else:
+        posts = ForumPost.query.order_by(ForumPost.timestamp.desc()).all()
+
+    return render_template('student/forum.html', posts=posts, query=query)
+
+@student_forum_bp.route('/student/forum/search')
+@login_required
+def forum_search():
+    query = request.args.get('q', '').strip()
+    if query:
+        posts = ForumPost.query.filter(ForumPost.title.ilike(f'%{query}%')).order_by(ForumPost.timestamp.desc()).all()
+    else:
+        posts = ForumPost.query.order_by(ForumPost.timestamp.desc()).all()
+
+    results = [{
+        'id': post.postID,
+        'title': post.title,
+        'author': post.user.name,
+        'timestamp': post.timestamp.strftime('%Y-%m-%d %H:%M')
+    } for post in posts]
+
+    return {'posts': results}
+
+# ===================== ADD POST =====================
+@student_forum_bp.route('/student/forum/new', methods=['GET', 'POST'])
+@login_required
+def add_post():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        content = request.form.get('content')
+        if not title or not content:
+            flash("Title and content are required.", "warning")
+            return redirect(url_for('student_forum.add_post'))
+
+        post = ForumPost(title=title, content=content, userID=current_user.userID)
+        post.createPost()
+        flash("Post created successfully!", "success")
+        return redirect(url_for('student_forum.forum'))
+
+    return render_template('student/add_post.html')
+
+# ===================== VIEW POST + COMMENTS =====================
+@student_forum_bp.route('/student/forum/<int:post_id>', methods=['GET', 'POST'])
+@login_required
+def view_post(post_id):
+    post = ForumPost.query.get_or_404(post_id)
+    comments = ForumComment.query.filter_by(postID=post_id).order_by(ForumComment.timestamp.asc()).all()
+
+    if request.method == 'POST':
+        content = request.form.get('content')
+        if not content:
+            flash("Comment cannot be empty.", "warning")
+            return redirect(url_for('student_forum.view_post', post_id=post_id))
+
+        comment = ForumComment(content=content, userID=current_user.userID, postID=post_id)
+        comment.addComment()
+        flash("Comment added!", "success")
+        return redirect(url_for('student_forum.view_post', post_id=post_id))
+
+    return render_template('student/forum_post.html', post=post, comments=comments)

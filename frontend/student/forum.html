@@ -1,34 +1,68 @@
 {% extends "student/dashboard.html" %}
-{% set active_page = 'forum' %}
-
 {% block dashboard_content %}
-<h4 class="fw-semibold mb-3">Forum</h4>
-
-<!-- Add New Post -->
-<form method="POST" action="{{ url_for('student.add_post') }}" class="mb-4">
-  <div class="input-group">
-    <input type="text" name="title" class="form-control" placeholder="Start a new discussion..." required>
-    <button class="btn btn-success">Post</button>
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-semibold">Student Forum</h4>
+    <a href="{{ url_for('student_forum.add_post') }}" class="btn btn-primary btn-sm">+ Add Post</a>
   </div>
-</form>
 
-{% if posts %}
-  {% for post in posts %}
-  <div class="card mb-3 shadow-sm">
-    <div class="card-body">
-      <h5 class="card-title">
-        <a href="{{ url_for('student.forum_post_detail', post_id=post.postID) }}">{{ post.title }}</a>
-      </h5>
-      <p class="card-text text-muted small">
-        by {{ post.user.name if post.user else 'Anonymous' }} • {{ post.timestamp.strftime('%d %b %Y, %I:%M %p') }}
-      </p>
-      <a href="{{ url_for('student.forum_post_detail', post_id=post.postID) }}" class="btn btn-outline-primary btn-sm">
-        View Comments ({{ post.comments|length }})
+  <div class="mb-3" style="width: 300px;">
+    <input type="text" id="searchInput" class="form-control" placeholder="Search posts...">
+  </div>
+
+  <ul class="list-group" id="postList">
+    {% for post in posts %}
+    <li class="list-group-item">
+      <a href="{{ url_for('student_forum.view_post', post_id=post.postID) }}" class="text-decoration-none">
+        <strong>{{ post.title }}</strong>
       </a>
-    </div>
-  </div>
-  {% endfor %}
-{% else %}
-  <div class="alert alert-info">No posts yet. Start the conversation!</div>
-{% endif %}
+      <div class="text-muted small">
+        Posted by {{ post.user.name }} on {{ post.timestamp.strftime('%Y-%m-%d %H:%M') }}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% if not posts %}
+  <p id="noPosts">No posts found.</p>
+  {% else %}
+  <p id="noPosts" style="display: none;">No posts found.</p>
+  {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const searchInput = document.getElementById("searchInput");
+  const postList = document.getElementById("postList");
+  const noPosts = document.getElementById("noPosts");
+
+  searchInput.addEventListener("input", async function() {
+    const query = searchInput.value.trim();
+
+    const res = await fetch(`/student/forum/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+
+    postList.innerHTML = ""; // clear current posts
+
+    if (data.posts.length === 0) {
+      noPosts.style.display = "block";
+    } else {
+      noPosts.style.display = "none";
+      data.posts.forEach(post => {
+        const li = document.createElement("li");
+        li.className = "list-group-item";
+        li.innerHTML = `
+          <a href="/student/forum/${post.id}" class="text-decoration-none">
+            <strong>${post.title}</strong>
+          </a>
+          <div class="text-muted small">
+            Posted by ${post.author} on ${post.timestamp}
+          </div>
+        `;
+        postList.appendChild(li);
+      });
+    }
+  });
+});
+</script>
 {% endblock %}

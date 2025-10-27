@@ -1,7 +1,7 @@
 from flask import Flask, render_template
 from flask_login import LoginManager
 from backend.models import db, User
-from backend.routes import auth_bp, admin_bp, student_bp
+from backend.routes import auth_bp, admin_bp, student_bp, student_forum_bp
 
 def createApp():
     app = Flask(__name__, template_folder='frontend')
@@ -25,6 +25,7 @@ def createApp():
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp) 
     app.register_blueprint(student_bp)
+    app.register_blueprint(student_forum_bp)
 
     # --- Home route ---
     @app.route('/')

@@ -19,43 +19,44 @@
     </div>
   </div>
 
-  <h5 class="fw-semibold mb-3">Ordered Items</h5>
-  {% if order.order_details %}
-  <div class="table-responsive">
-    <table class="table table-bordered align-middle">
-      <thead class="table-danger">
+<h5 class="fw-semibold mb-3">Ordered Items</h5>
+{% if order.order_details %}
+<div class="table-responsive">
+  <table class="table table-bordered align-middle">
+    <thead class="table-danger">
+      <tr>
+        <th>Item ID</th>
+        <th>Title</th>
+        <th>Quantity</th>
+        <th>Price (₹)</th>
+        <th>Subtotal (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set grand_total = namespace(value=0) %}
+      {% for od in order.order_details %}
+        {% set subtotal = od.price * od.quantity %}
+        {% set grand_total.value = grand_total.value + subtotal %}
         <tr>
-          <th>Item ID</th>
-          <th>Title</th>
-          <th>Quantity</th>
-          <th>Price (₹)</th>
-          <th>Subtotal (₹)</th>
+          <td>{{ od.item.itemID }}</td>
+          <td>{{ od.item.title }}</td>
+          <td>{{ od.quantity }}</td>
+          <td>{{ "%.2f"|format(od.price) }}</td>
+          <td>{{ "%.2f"|format(subtotal) }}</td>
         </tr>
-      </thead>
-      <tbody>
-        {% set grand_total = 0 %}
-        {% for od in order.order_details %}
-          {% set subtotal = od.price * od.quantity %}
-          {% set grand_total = grand_total + subtotal %}
-          <tr>
-            <td>{{ od.item.itemID }}</td>
-            <td>{{ od.item.title }}</td>
-            <td>{{ od.quantity }}</td>
-            <td>{{ "%.2f"|format(od.price) }}</td>
-            <td>{{ "%.2f"|format(subtotal) }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr>
-          <th colspan="4" class="text-end">Grand Total:</th>
-          <th>₹{{ "%.2f"|format(grand_total) }}</th>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
-  {% else %}
-  <div class="alert alert-info text-center">No items in this order.</div>
-  {% endif %}
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="4" class="text-end">Grand Total:</th>
+        <th>₹{{ "%.2f"|format(grand_total.value) }}</th>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info text-center">No items in this order.</div>
+{% endif %}
+
 </div>
 {% endblock %}
