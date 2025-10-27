@@ -798,6 +798,43 @@ def delete_item(item_id):
     flash("Item deleted successfully.", "success")
     return redirect(url_for('vendor.my_items'))
 
+
+@vendor_bp.route('/vendor/orders')
+@login_required
+def orders():
+    if current_user.role != 'vendor':
+        flash("Unauthorized access", "danger")
+        return redirect(url_for('vendor.dashboard'))
+
+    # Fetch all orders containing items sold by this vendor
+    vendor_orders = (
+        Order.query.join(OrderDetails)
+        .join(Item)
+        .options(joinedload(Order.order_details).joinedload(OrderDetails.item))
+        .filter(Item.sellerID == current_user.userID)
+        .order_by(Order.orderDate.desc())
+        .all()
+    )
+
+    return render_template('vendor/orders.html', orders=vendor_orders)
+
+@vendor_bp.route("/marketplace", methods=["GET", "POST"])
+@login_required
+def marketplace():
+    query = request.args.get("q", "")
+    items_query = Item.query.filter(Item.availability > 0)
+
+    if query:
+        items_query = items_query.filter(
+            db.or_(
+                Item.title.ilike(f"%{query}%"),
+                Item.category.ilike(f"%{query}%")
+            )
+        )
+
+    items = items_query.order_by(Item.itemID.desc()).all()
+    return render_template("vendor/marketplace.html", items=items)
+
 from sqlalchemy.orm import joinedload
 from datetime import datetime
 
