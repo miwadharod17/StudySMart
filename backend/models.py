@@ -6,8 +6,7 @@ from flask_login import UserMixin
 
 db = SQLAlchemy()
 
-# ===================== USER =====================
-
+# user
 class User(db.Model, UserMixin):
     userID = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -15,13 +14,8 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(50), default='student')
 
-    # Seller relationship — items sold by this user
     items_sold = db.relationship('Item', back_populates='seller', lazy=True)
-
-    # Buyer relationship — orders placed by this user
     purchased_orders = db.relationship('Order', back_populates='buyer', lazy=True)
-
-    # Other relationships
     cart_items = db.relationship('ShoppingCart', backref='user', lazy=True)
     feedbacks = db.relationship('Feedback', backref='user', lazy=True)
     forum_posts = db.relationship('ForumPost', backref='user', lazy=True)
@@ -56,28 +50,26 @@ class User(db.Model, UserMixin):
 
         order = Order(userID=self.userID, voucherID=voucher.voucherID if voucher else None)
         try:
-            # Place order and commit in a single atomic transaction
             result_message = order.placeOrder(cart_items=self.cart_items, voucher=voucher, payment_method=payment_method)
             return result_message
         except Exception as e:
             db.session.rollback()
             return f"Error during checkout: {e}"
 
-# ===================== ITEM =====================
 
+# Item
 class Item(db.Model):
     itemID = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     category = db.Column(db.String(100))
     price = db.Column(db.Float, nullable=False)
     availability = db.Column(db.Integer, default=0)
-
-    # Foreign key to seller (User)
     sellerID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=True)
+    
     seller = db.relationship('User', back_populates='items_sold')
-
     feedbacks = db.relationship('Feedback', backref='item', lazy=True)
     orders = db.relationship('OrderDetails', backref='item', lazy=True)
+    
     def uploadImage(self):
         print(f"Image uploaded for item: {self.title}")
 
@@ -96,8 +88,7 @@ class Item(db.Model):
             db.session.rollback()
             print(f"Error updating quantity: {e}")
 
-# ===================== VOUCHER (Moved Up) =====================
-
+# Voucher
 class Voucher(db.Model):
     voucherID = db.Column(db.Integer, primary_key=True)
     discountPercent = db.Column(db.Float)
@@ -126,20 +117,16 @@ class Voucher(db.Model):
         return datetime.utcnow() <= self.expiryDate
 
 
-# ===================== ORDER =====================
-
+# order
 class Order(db.Model):
     orderID = db.Column(db.Integer, primary_key=True)
     orderDate = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(50), default='Pending')
-
-    # Foreign key to buyer (User)
     buyerID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
-    buyer = db.relationship('User', back_populates='purchased_orders')
-
     voucherID = db.Column(db.Integer, db.ForeignKey('voucher.voucherID'), nullable=True)
+    
+    buyer = db.relationship('User', back_populates='purchased_orders')
     bill = db.relationship('BillInvoice', back_populates='order', uselist=False)
-
     order_details = db.relationship('OrderDetails', backref='order', lazy=True)
 
     def placeOrder(self, cart_items, voucher=None, payment_method='Cash'):
@@ -229,8 +216,7 @@ class Order(db.Model):
     def viewOrders(self):
         return f"Order ID: {self.orderID}, Status: {self.status}"
 
-# ===================== ORDER DETAILS =====================
-
+# order details
 class OrderDetails(db.Model):
     orderDetailID = db.Column(db.Integer, primary_key=True)
     orderID = db.Column(db.Integer, db.ForeignKey('order.orderID'), nullable=False)
@@ -250,14 +236,14 @@ class OrderDetails(db.Model):
     def storeOrder(self):
         print(f"Order detail stored for order ID {self.orderID}")
 
-# ===================== SHOPPING CART =====================
-
+# shopping cart
 class ShoppingCart(db.Model):
     cartID = db.Column(db.Integer, primary_key=True)
     userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
     itemID = db.Column(db.Integer, db.ForeignKey('item.itemID'), nullable=False)
     quantity = db.Column(db.Integer, default=1)
     date_added = db.Column(db.DateTime, default=datetime.utcnow)
+    
     item = db.relationship('Item', backref='cart_items', lazy=True)
 
     def __repr__(self):
@@ -302,8 +288,7 @@ class ShoppingCart(db.Model):
 
     
 
-# ===================== BILL INVOICE =====================
-
+# Bill invoice
 class BillInvoice(db.Model):
     billID = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
@@ -311,10 +296,8 @@ class BillInvoice(db.Model):
     paymentMethod = db.Column(db.String(50))
     status = db.Column(db.String(50), default='Pending')
     userID = db.Column(db.Integer, db.ForeignKey('user.userID'), nullable=False)
-
     orderID = db.Column(db.Integer, db.ForeignKey('order.orderID'), nullable=False)
 
-    # Optional: relationship back to order (if you want to access invoice.order)
     order = db.relationship('Order', back_populates='bill')
     
     def generateBillInvoice(self):
@@ -329,8 +312,7 @@ class BillInvoice(db.Model):
     def showInvoice(self):
         return f"Bill ID: {self.billID}, Amount: ₹{self.amount}, Status: {self.status}"
 
-# ===================== FEEDBACK =====================
-
+# Feedback
 class Feedback(db.Model):
     feedbackID = db.Column(db.Integer, primary_key=True)
     rating = db.Column(db.Integer, db.CheckConstraint('rating BETWEEN 1 AND 5'))
@@ -347,8 +329,7 @@ class Feedback(db.Model):
             db.session.rollback()
             print(f"Error giving feedback: {e}")
 
-# ===================== FORUM POST =====================
-
+# post
 class ForumPost(db.Model):
     postID = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200))
@@ -379,8 +360,7 @@ class ForumPost(db.Model):
             db.session.rollback()
             print(f"Error deleting post: {e}")
 
-# ===================== FORUM COMMENT =====================
-
+# comment
 class ForumComment(db.Model):
     commentID = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(500))
