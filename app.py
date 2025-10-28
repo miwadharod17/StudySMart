@@ -31,7 +31,7 @@ def createApp():
     # --- Home route ---
     @app.route('/')
     def home():
-        return render_template('Home.html')
+        return render_template('index.html')
 
     # --- Create tables if not exist ---
     with app.app_context():

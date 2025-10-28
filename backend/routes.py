@@ -31,7 +31,7 @@ def login_role(role):
             elif role == 'student':
                 return redirect(url_for('student.dashboard'))
             else:
-                return redirect(url_for('home'))
+                return redirect(url_for('index'))
 
         else:
             flash('Invalid credentials or role mismatch.', 'danger')
@@ -42,7 +42,7 @@ def login_role(role):
         'vendor': 'VendorLogin.html',
         'admin': 'AdminLogin.html'
     }
-    return render_template(page_map.get(role, 'Home.html'))
+    return render_template(page_map.get(role, 'index.html'))
 
 
 
