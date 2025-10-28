@@ -66,6 +66,9 @@
 <a href="{{ url_for('student.orders') }}" class="nav-link {% if active_page == 'orders' %}active{% endif %}">
   My Orders
 </a>
+<a href="{{ url_for('student.student_orders') }}" class="nav-link {% if active_page == 'orders' %}active{% endif %}">
+  Received Orders
+</a>
 
   <a href="{{ url_for('student_forum.forum') }}"
      class="nav-link {% if active_page == 'forum' %}active{% endif %}">

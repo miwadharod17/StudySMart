@@ -448,6 +448,25 @@ def orders():
     orders = Order.query.filter_by(buyerID=current_user.userID).order_by(Order.orderDate.desc()).all()
     return render_template("student/orders.html", orders=orders, active_page="orders")
 
+# orders received list
+@student_bp.route('/student_orders')
+@login_required
+def student_orders():
+    if current_user.role != 'student':
+        flash("Unauthorized access", "danger")
+        return redirect(url_for('student.dashboard'))
+
+    student_orders = (
+        Order.query.join(OrderDetails)
+        .join(Item)
+        .options(joinedload(Order.order_details).joinedload(OrderDetails.item))
+        .filter(Item.sellerID == current_user.userID)
+        .order_by(Order.orderDate.desc())
+        .all()
+    )
+
+    return render_template('student/student_orders.html', orders=student_orders)
+
 # student items list
 @student_bp.route('/student/my_items')
 @login_required

@@ -1,0 +1,43 @@
+{% extends "student/dashboard.html" %}
+{% set active_page = 'orders' %}
+
+{% block dashboard_content %}
+<div class="container py-4">
+  <h3>Orders Received</h3>
+
+  {% if orders %}
+  <table class="table table-bordered table-sm mt-3">
+    <thead>
+      <tr>
+        <th>Order ID</th>
+        <th>Date</th>
+        <th>Items</th>
+        <th>Total (₹)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+      <tr>
+        <td>{{ order.orderID }}</td>
+        <td>{{ order.orderDate.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <ul class="mb-0">
+            {% for od in order.order_details %}
+              {% if od.item.sellerID == current_user.userID %}
+                <li>{{ od.item.title }} × {{ od.quantity }}</li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </td>
+        <td>₹{{ '%.2f'|format(order.bill.amount if order.bill else 0) }}</td>
+        <td>{{ order.status }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-muted">No orders received yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
